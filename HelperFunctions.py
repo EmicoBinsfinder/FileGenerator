@@ -288,20 +288,14 @@ unfix           bonds_comp
 undump          ovito_comp
 """)
 
-def MakeLAMMPSCompRestartFile(
+def MakeLAMMPSRestartFile(
         CWD, 
         Wall_V,
-        restartfile,
+        restartfilename,
         restarttype,
         System,
         EquilTime,
         CompTime,
-        Wall_Z,
-        HType,
-        FeType,
-        OType,
-        PType,
-        CType,
         ReaxFFTyping,
         Temp,
         EquilTemp,
@@ -341,7 +335,7 @@ timestep       0.25                                        # in fs
 
 #----------------------initial position of atoms------------------------- 
 
-read_restart {restartfile}
+read_restart {restartfilename}
 
 #----------------------calculate variables-------------------------
 
@@ -531,7 +525,7 @@ timestep       0.25                                        # in fs
 
 #----------------------initial position of atoms------------------------- 
 
-read_restart {restartfile}
+read_restart {restartfilename}
 
 #----------------------calculate variables-------------------------
 

@@ -24,6 +24,7 @@ import collections
 from pathlib import Path
 import subprocess
 from copy import deepcopy
+import HelperFunctions as HF
 
 def runcmd(cmd, verbose = False, *args, **kwargs):
     #bascially allows python to run a bash command, and the code makes sure 
@@ -36,7 +37,7 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 ######### File Generation Parameters ###########
 
 STAGE = 'First'
-STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron_Oxide/8nm/' # Home directory to launch generation from
+#STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron_Oxide/8nm/' # Home directory to launch generation from
 STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/DCMP_Solvent/' # Home directory to launch generation from
 SOURCEDIR = os.path.join(STARTINGDIR, 'SourceDir') # Directory where enabler files are 
 System = 'DCMP_Fe_48_TCP_Mixed' # System being simulated 
@@ -56,32 +57,85 @@ ReaxFFTyping = 'Fe P O C H' # Order of elements for ReaxFF command
 Temperatures = ['600K'] # Temperatures to be simulated
 Pressures = ['1GPa', '2GPa', '3GPa', '4GPa', '5GPa'] # Pressures to be simulated
 EquilPress = '10' # Equilibration Temperature, in MPa
+EquilTemp = '300'
 Safezone = '800' # System memory parameter
 Mincap = '1800' # System memory parameter
 RestartFileFreq = '100' 
 
 ############# Calling the function #########################
 
+FirstRun = False
+copycommand = 'copy' #'cp'
 os.chdir(STARTINGDIR) # Go to starting directory
 
 for Temp in Temperatures:
     for Press in Pressures:
         os.chdir(os.path.join(STARTINGDIR, Temp, Press))
-        #for dir in os.listdir():
-        #    assert os.path.isdir(os.path.join(os.getcwd(), dir)), 'There are non-directory files in this directory'
 
         RestartList = [x for x in os.listdir() if 'Restart' in x]
         
-        if len(RestartList) == 0:
+        if FirstRun:
+            runcmd('mkdir FirstRun')
+            os.chdir(os.path.join(os.getcwd(), 'FirstRun')) #Enter first run directory
+            CWD = os.getcwd()
+            for file in os.listdir(SOURCEDIR): # Copy enabler files from source directory
+                runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
+        
+            HF.MakeLAMMPSFile(CWD, Wall_V, System, EquilTime, CompTime, Wall_Z, HType,
+                FeType, OType, PType, CType, ReaxFFTyping, Temp, EquilTemp, Press,
+                EquilPress, Fix_Z, Thermo_Z, Safezone, Mincap, RestartFileFreq)            
+
+        elif len(RestartList) == 0:
             runcmd('mkdir Restart_1')
-            runcmd(f'copy {SOURCEDIR} /Restart_1')
+            os.chdir(os.path.join(os.getcwd(), f'Restart_1'))
+            for file in os.listdir(SOURCEDIR):
+                runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
+
+            os.chdir(os.path.join(STARTINGDIR, Temp, Press, 'FirstRun'))
+            files = os.listdir()
+
+            # Get restart file progress
+            equilfiles = [int(x.split('.')[-1]) for x in files if 'equil.restart' in x]
+            compfiles = [int(x.split('.')[-1]) for x in files if 'comp.restart' in x]
+            restartfiles = equilfiles + compfiles # Concatenating restart file numbers
+            restartfiles = sorted(restartfiles)
+
+            os.chdir(os.path.join(STARTINGDIR, Temp, Press, 'Restart_1')) #Enter first run directory
+            CWD = os.getcwd()
+
+            if restartfiles[-1] <= int(EquilTime):
+                restarttype = 'Equilibration'
+                restartfilename = f'equil.restart.{restartfiles[-1]}'
+                runcmd(f'{copycommand} "{os.path.join(STARTINGDIR, Temp, Press, 'FirstRun', restartfilename)}"\
+                    {os.getcwd()}')
+                HF.MakeLAMMPSRestartFile(CWD, Wall_V, restartfilename, restarttype, System,
+                                         EquilTime, CompTime, ReaxFFTyping, Temp, EquilTemp,
+                                         Press, EquilPress, Fix_Z, Thermo_Z, Safezone,
+                                         Mincap, RestartFileFreq)
+            else:
+                restarttype = 'CompShear'
+                restartfilename = f'comp.restart.{restartfiles[-1]}'
+                runcmd(f'{copycommand} "{os.path.join(STARTINGDIR, Temp, Press, 'FirstRun', restartfilename)}"\
+                    {os.getcwd()}')
+                HF.MakeLAMMPSRestartFile(CWD, Wall_V, restartfilename, restarttype, System,
+                                         EquilTime, CompTime, ReaxFFTyping, Temp, EquilTemp,
+                                         Press, EquilPress, Fix_Z, Thermo_Z, Safezone,
+                                         Mincap, RestartFileFreq)
+
 
         else:
             RestartNumbers = [x.split('_')[-1] for x in RestartList]
             RestartNumber = sorted(RestartNumbers)[-1]
             print(RestartNumber)
-            runcmd('mkdir Restart_1')
-            runcmd(f'copy {SOURCEDIR} /Restart_1')
+            Restart = 'Restart_1'
+            runcmd(f'mkdir {Restart}')
+            
+            os.chdir(os.path.join(os.getcwd(), f'{Restart}'))
+            for file in os.listdir(SOURCEDIR):
+                runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
+
+        # Check for last restart file generated and move to new folder
+        os.chdir(os.path.join(STARTINGDIR, Temp, Press))
 
 
 
