@@ -102,6 +102,8 @@ for Temp in Temperatures:
             
             HF.MakePBSFile(System, Temp, Press, CWD)
 
+            runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
+
         # elif len(RestartList) == 0:
         #     runcmd('mkdir Restart_1')
         #     os.chdir(os.path.join(os.getcwd(), f'Restart_1'))
