@@ -40,7 +40,7 @@ variable Temp_eq equal {EquilTemp} # Equilibration temperature in K
 variable       Press_eq  equal {EquilPress}*9.86923                  # Equilibration pressure in atm (10 MPa)
 
 variable Temp equal {Temp} # Temperature in K
-variable Press_MPa equal {Pressure} # Applied pressure in MPa
+variable Press_MPa equal {Pressure}000 # Applied pressure in MPa
 variable       Press     equal ${{Press_MPa}}*9.86923        # Applied pressure in atm
  
 variable       Nequil    equal {EquilTime}                      # Number of timesteps (fs) to equilibrate (300 K, 1 atm)
@@ -320,7 +320,7 @@ variable       Temp_eq equal {EquilTemp} # Equilibration temperature in K
 variable       Press_eq  equal {EquilPress}*9.86923                  # Equilibration pressure in atm (10 MPa)
 
 variable Temp equal {Temp} # Temperature in K
-variable Press_MPa equal {Pressure} # Applied pressure in MPa
+variable Press_MPa equal {Pressure}000 # Applied pressure in MPa
 variable       Press     equal ${{Press_MPa}}*9.86923        # Applied pressure in atm
 
 variable       Nequil    equal {EquilTime}                      # Number of timesteps (fs) to equilibrate (300 K, 1 atm)
@@ -510,7 +510,7 @@ boundary p p f
 #----------------------initial variables-------------------------
 
 variable Temp equal {Temp} # Temperature in K
-variable Press_MPa equal {Pressure} # Applied pressure in MPa
+variable Press_MPa equal {Pressure}000 # Applied pressure in MPa
 variable       Press     equal ${{Press_MPa}}*9.86923        # Applied pressure in atm
 
 variable       Nequil    equal {EquilTime}                      # Number of timesteps (fs) to equilibrate (300 K, 1 atm)
@@ -642,5 +642,16 @@ unfix           bonds_comp
 undump          ovito_comp
 """)
 
-def MakePBSFile(System, HPC, STAGE):
-    pass
+def MakePBSFile(System, Temp, Press, CWD):
+    with open(os.path.join(CWD, f'{System}_{Temp}_{Press}.pbs'), 'w') as file:
+        file.write(f"""#!/bin/bash
+
+#PBS -l select=1:ncpus=32:mem=62gb
+#PBS -l walltime=72:00:00
+
+module load intel-suite/2020.2
+module load mpi/intel-2019.6.166
+
+cd $PBS_O_WORKDIR
+mpiexec ~/tmp/bin/lmp -in {System}.lammps
+""")
