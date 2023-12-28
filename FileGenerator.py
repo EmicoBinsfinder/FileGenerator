@@ -9,6 +9,7 @@ Script to automatically generate files/directories for similar conditions
 - Be able to toggle between generated LAMMPS file (equil or comp)
 - Make QSUB files for each condition being simulated
 - Make QSUB files depending on HPC being used
+- Need to make sure that we are creating right stage restart for eachn condition
 
 Will require that all experiments that we are generating files for are
 at the same 'stage', will need to check this.
@@ -38,23 +39,23 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 
 STAGE = 'First'
 #STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron_Oxide/8nm/' # Home directory to launch generation from
-STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron/2nm/' # Home directory to launch generation from
+STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron_Oxide/5nm/' # Home directory to launch generation from
 SOURCEDIR = os.path.join(STARTINGDIR, 'SourceDir') # Directory where enabler files are 
-System = '90_TCP_Fe_0_2nm' # System being simulated 
+System = 'Fe2O3_TCP_5nm' # System being simulated 
 EquilTime = '800000' # Equilibration time
 CompTime = '4000000' # Compression and shear time
 Wall_V = '0.0001' # Wall velocity
-Wall_Z = '14' # Wall thickness
+Wall_Z = '23' # Wall thickness
 # Atom types
 HType =  '5' 
 FeType = '1'
-OType = '3'
-PType = '2'
+OType = '2'
+PType = '3'
 CType = '4'
 Fix_Z = '1.2' # Fixed layer thickness
 Thermo_Z = '2.4' # Thermostat layer thickness
-ReaxFFTyping = 'Fe P O C H' # Order of elements for ReaxFF command
-Temperatures = ['500K', '600K', '700K'] # Temperatures to be simulated
+ReaxFFTyping = 'Fe O P C H' # Order of elements for ReaxFF command
+Temperatures = ['500K'] # Temperatures to be simulated
 Pressures = ['1GPa', '2GPa', '3GPa', '4GPa', '5GPa'] # Pressures to be simulated
 EquilPress = '10' # Equilibration Temperature, in MPa
 EquilTemp = '300'
@@ -62,9 +63,9 @@ Safezone = '80' # System memory parameter
 Mincap = '180' # System memory parameter
 RestartFileFreq = '100' 
 
-############# Calling the function #########################
+############# Running the script #########################
 
-FirstRun = True
+FirstRun = False
 copycommand = 'copy' #'cp'
 os.chdir(STARTINGDIR) # Go to starting directory
 
@@ -85,10 +86,9 @@ for Temp in Temperatures:
         except FileExistsError:
             pass
 
+        # Enter condition directory
         os.chdir(os.path.join(STARTINGDIR, Temp, Press))
 
-        # RestartList = [x for x in os.listdir() if 'Restart' in x]
-        
         if FirstRun:
             runcmd('mkdir FirstRun')
             os.chdir(os.path.join(os.getcwd(), 'FirstRun')) #Enter first run directory
@@ -104,57 +104,77 @@ for Temp in Temperatures:
 
             runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
 
-        # elif len(RestartList) == 0:
-        #     runcmd('mkdir Restart_1')
-        #     os.chdir(os.path.join(os.getcwd(), f'Restart_1'))
-        #     for file in os.listdir(SOURCEDIR):
-        #         runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
+        # Check how many restarts there are 
+        RestartList = [x for x in os.listdir() if 'Restart' in x]
+        
+        # Condition for if it's the first restart
+        if len(RestartList) == 0:
+            runcmd('mkdir Restart_1')
+            os.chdir(os.path.join(os.getcwd(), f'Restart_1'))
+            for file in os.listdir(SOURCEDIR):  
+                runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
 
-        #     os.chdir(os.path.join(STARTINGDIR, Temp, Press, 'FirstRun'))
-        #     files = os.listdir()
+            FirstStage = 'FirstRun' 
+            NextStage = 'Restart_1'
 
-        #     # Get restart file progress
-        #     equilfiles = [int(x.split('.')[-1]) for x in files if 'equil.restart' in x]
-        #     compfiles = [int(x.split('.')[-1]) for x in files if 'comp.restart' in x]
-        #     restartfiles = equilfiles + compfiles # Concatenating restart file numbers
-        #     restartfiles = sorted(restartfiles)
-
-        #     os.chdir(os.path.join(STARTINGDIR, Temp, Press, 'Restart_1')) #Enter first run directory
-        #     CWD = os.getcwd()
-
-        #     if restartfiles[-1] <= int(EquilTime):
-        #         restarttype = 'Equilibration'
-        #         restartfilename = f'equil.restart.{restartfiles[-1]}'
-        #         runcmd(f'{copycommand} "{os.path.join(STARTINGDIR, Temp, Press, 'FirstRun', restartfilename)}"\
-        #             {os.getcwd()}')
-        #         HF.MakeLAMMPSRestartFile(CWD, Wall_V, restartfilename, restarttype, System,
-        #                                  EquilTime, CompTime, ReaxFFTyping, Temp, EquilTemp,
-        #                                  Press, EquilPress, Fix_Z, Thermo_Z, Safezone,
-        #                                  Mincap, RestartFileFreq)
-        #     else:
-        #         restarttype = 'CompShear'
-        #         restartfilename = f'comp.restart.{restartfiles[-1]}'
-        #         runcmd(f'{copycommand} "{os.path.join(STARTINGDIR, Temp, Press, 'FirstRun', restartfilename)}"\
-        #             {os.getcwd()}')
-        #         HF.MakeLAMMPSRestartFile(CWD, Wall_V, restartfilename, restarttype, System,
-        #                                  EquilTime, CompTime, ReaxFFTyping, Temp, EquilTemp,
-        #                                  Press, EquilPress, Fix_Z, Thermo_Z, Safezone,
-        #                                  Mincap, RestartFileFreq)
+            #Check if first run directory has all relevant files
+            if len(os.listdir(os.getcwd())) > 12:
+                print('Previous simulation ran, creating files for next simulation')
                 
-        #     HF.MakePBSFile(System, Temp, Press, CWD)
-
-
-        # else:
-        #     RestartNumbers = [x.split('_')[-1] for x in RestartList]
-        #     RestartNumber = sorted(RestartNumbers)[-1]
-        #     print(RestartNumber)
-        #     Restart = 'Restart_1'
-        #     runcmd(f'mkdir {Restart}')
+                HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
+                copycommand, EquilTime, Wall_V, System, CompTime,
+                ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
+                Safezone, Mincap, RestartFileFreq, runcmd)
             
-        #     os.chdir(os.path.join(os.getcwd(), f'{Restart}'))
-        #     for file in os.listdir(SOURCEDIR):
-        #         runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
+            else:
+                print('Previous similation not yet run, creating files')
+                HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
+                copycommand, EquilTime, Wall_V, System, CompTime,
+                ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
+                Safezone, Mincap, RestartFileFreq, runcmd)
 
+        # Condition for if it's after the first restart
+        else:
+            # Get number of restarted simulations
+            RestartNumbers = [x.split('_')[-1] for x in RestartList]
+            CurrentRestartNumber = int(sorted(RestartNumbers)[-1])
+            NextRestartNumber = CurrentRestartNumber + 1
+            PreviousRestartNumber = CurrentRestartNumber - 1
 
+            os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'Restart_{CurrentRestartNumber}'))
+            #Check if previous restart has ran
+            
+            if len(os.listdir(os.getcwd())) > 12:
+                print('Previous simulation ran') # Could add note saying how far it ran
+                os.chdir(os.path.join(STARTINGDIR, Temp, Press)) 
+                runcmd(f'mkdir Restart_{NextRestartNumber}')
+                os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'Restart_{NextRestartNumber}')) 
+                # Copy enabler files into 
+                for file in os.listdir(SOURCEDIR):  
+                    runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
 
+                FirstStage = f'Restart_{CurrentRestartNumber}' 
+                NextStage = f'Restart_{NextRestartNumber}'
 
+                HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
+                copycommand, EquilTime, Wall_V, System, CompTime,
+                ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
+                Safezone, Mincap, RestartFileFreq, runcmd)
+
+            else:
+                print('Previous similation not yet run, creating files in current directory')
+                os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'Restart_{CurrentRestartNumber}')) 
+                for file in os.listdir(SOURCEDIR):  
+                    runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
+                
+                FirstStage = f'Restart_{PreviousRestartNumber}' 
+                if PreviousRestartNumber == 0:
+                    FirstStage = 'FirstRun'
+                
+                NextStage = f'Restart_{CurrentRestartNumber}'
+
+                HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
+                copycommand, EquilTime, Wall_V, System, CompTime,
+                ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
+                Safezone, Mincap, RestartFileFreq, runcmd)
+                

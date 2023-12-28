@@ -655,3 +655,40 @@ module load mpi/intel-2019.6.166
 cd $PBS_O_WORKDIR
 mpiexec ~/tmp/bin/lmp -in {System}.lammps
 """)
+        
+def MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
+              copycommand, EquilTime, Wall_V, System, CompTime,
+              ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
+              Safezone, Mincap, RestartFileFreq, runcmd):
+    os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'{FirstStage}'))
+    files = os.listdir()
+
+    # Get restart file progress
+    equilfiles = [int(x.split('.')[-1]) for x in files if 'equil.restart' in x]
+    compfiles = [int(x.split('.')[-1]) for x in files if 'comp.restart' in x]
+    restartfiles = equilfiles + compfiles # Concatenating restart file numbers
+    restartfiles = sorted(restartfiles)
+
+    os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'{NextStage}')) #Enter first run directory
+    CWD = os.getcwd()
+
+    if restartfiles[-1] <= int(EquilTime):
+        restarttype = 'Equilibration'
+        restartfilename = f'equil.restart.{restartfiles[-1]}'
+        runcmd(f'{copycommand} "{os.path.join(STARTINGDIR, Temp, Press, FirstStage, restartfilename)}"\
+            {os.getcwd()}')
+        MakeLAMMPSRestartFile(CWD, Wall_V, restartfilename, restarttype, System,
+                                EquilTime, CompTime, ReaxFFTyping, Temp[:3], EquilTemp,
+                                Press[0], EquilPress, Fix_Z, Thermo_Z, Safezone,
+                                Mincap, RestartFileFreq)
+    else:
+        restarttype = 'CompShear'
+        restartfilename = f'comp.restart.{restartfiles[-1]}'
+        runcmd(f'{copycommand} "{os.path.join(STARTINGDIR, Temp, Press, FirstStage, restartfilename)}"\
+            {os.getcwd()}')
+        MakeLAMMPSRestartFile(CWD, Wall_V, restartfilename, restarttype, System,
+                                EquilTime, CompTime, ReaxFFTyping, Temp[:3], EquilTemp,
+                                Press[0], EquilPress, Fix_Z, Thermo_Z, Safezone,
+                                Mincap, RestartFileFreq)
+        
+    MakePBSFile(System, Temp, Press, CWD)
