@@ -23,7 +23,8 @@ def MakeLAMMPSFile(
         Thermo_Z,
         Safezone,
         Mincap,
-        RestartFileFreq
+        RestartFileFreq,
+	    HPC
 ):
 
     with open(os.path.join(CWD, f'{System}.lammps'), 'w') as file:

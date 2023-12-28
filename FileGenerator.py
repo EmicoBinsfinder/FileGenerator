@@ -37,7 +37,7 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 
 ######### File Generation Parameters ###########
 
-STAGE = 'First'
+STARTINGDIR = '/home/mmm1058/Scratch/TCP_Templates/DCMP_Solvent/' # Home directory to launch generation from
 STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/DCMP_Solvent/' # Home directory to launch generation from
 SOURCEDIR = os.path.join(STARTINGDIR, 'SourceDir') # Directory where enabler files are 
 System = 'DCMP_Fe_48_TCP_Mixed' # System being simulated 
@@ -54,7 +54,7 @@ CType = '4'
 Fix_Z = '1.2' # Fixed layer thickness
 Thermo_Z = '2.4' # Thermostat layer thickness
 ReaxFFTyping = 'Fe P O C H' # Order of elements for ReaxFF command
-Temperatures = ['600K'] # Temperatures to be simulated
+Temperatures = ['500K', '700K'] # Temperatures to be simulated
 Pressures = ['1GPa', '2GPa', '3GPa', '4GPa', '5GPa'] # Pressures to be simulated
 EquilPress = '10' # Equilibration Temperature, in MPa
 EquilTemp = '300'
@@ -65,8 +65,8 @@ HPC = "UCL"
 
 ############# Running the script #########################
 
-FirstRun = False
-copycommand = 'copy' #'cp'
+FirstRun = True
+copycommand = 'copy'
 os.chdir(STARTINGDIR) # Go to starting directory
 
 for Temp in Temperatures:
@@ -75,7 +75,7 @@ for Temp in Temperatures:
 
         #Make directories if they don't exist
         try:
-            os.mkdir(f'{Temp}')
+            os.mkdir(f"{Temp}")
         except FileExistsError:
             pass
         
@@ -100,9 +100,11 @@ for Temp in Temperatures:
                 FeType, OType, PType, CType, ReaxFFTyping, Temp[:3], EquilTemp, Press[0],
                 EquilPress, Fix_Z, Thermo_Z, Safezone, Mincap, RestartFileFreq, HPC)            
             
-            HF.MakePBSFile(System, Temp, Press, CWD)
+            HF.MakePBSFile(System, Temp, Press, CWD, HPC)
 
             runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
+
+            continue
 
         # Check how many restarts there are 
         RestartList = [x for x in os.listdir() if 'Restart' in x]
@@ -125,6 +127,8 @@ for Temp in Temperatures:
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
                 Safezone, Mincap, RestartFileFreq, runcmd, HPC)
+                
+                runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
             
             else:
                 print('Previous similation not yet run, creating files')
@@ -132,6 +136,8 @@ for Temp in Temperatures:
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
                 Safezone, Mincap, RestartFileFreq, runcmd, HPC)
+                
+                runcmd(f'qsub {System}_{Temp}_{Press}.pbs')		
 
         # Condition for if it's after the first restart
         else:
@@ -160,6 +166,8 @@ for Temp in Temperatures:
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
                 Safezone, Mincap, RestartFileFreq, runcmd, HPC)
+                
+                runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
 
             else:
                 print('Previous similation not yet run, creating files in current directory')
@@ -177,4 +185,6 @@ for Temp in Temperatures:
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
                 Safezone, Mincap, RestartFileFreq, runcmd, HPC)
+                
+                runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
                 
