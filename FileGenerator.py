@@ -38,30 +38,30 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 ######### File Generation Parameters ###########
 
 STAGE = 'First'
-#STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron_Oxide/8nm/' # Home directory to launch generation from
-STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/RoughSurfaces/Iron_Oxide/5nm/' # Home directory to launch generation from
+STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/DCMP_Solvent/' # Home directory to launch generation from
 SOURCEDIR = os.path.join(STARTINGDIR, 'SourceDir') # Directory where enabler files are 
-System = 'Fe2O3_TCP_5nm' # System being simulated 
+System = 'DCMP_Fe_48_TCP_Mixed' # System being simulated 
 EquilTime = '800000' # Equilibration time
 CompTime = '4000000' # Compression and shear time
 Wall_V = '0.0001' # Wall velocity
-Wall_Z = '23' # Wall thickness
+Wall_Z = '7' # Wall thickness
 # Atom types
 HType =  '5' 
 FeType = '1'
-OType = '2'
-PType = '3'
+OType = '3'
+PType = '2'
 CType = '4'
 Fix_Z = '1.2' # Fixed layer thickness
 Thermo_Z = '2.4' # Thermostat layer thickness
-ReaxFFTyping = 'Fe O P C H' # Order of elements for ReaxFF command
-Temperatures = ['500K'] # Temperatures to be simulated
+ReaxFFTyping = 'Fe P O C H' # Order of elements for ReaxFF command
+Temperatures = ['600K'] # Temperatures to be simulated
 Pressures = ['1GPa', '2GPa', '3GPa', '4GPa', '5GPa'] # Pressures to be simulated
 EquilPress = '10' # Equilibration Temperature, in MPa
 EquilTemp = '300'
-Safezone = '80' # System memory parameter
-Mincap = '180' # System memory parameter
-RestartFileFreq = '100' 
+Safezone = '800' # System memory parameter
+Mincap = '1800' # System memory parameter
+RestartFileFreq = '100'
+HPC = "UCL"
 
 ############# Running the script #########################
 
@@ -98,7 +98,7 @@ for Temp in Temperatures:
         
             HF.MakeLAMMPSFile(CWD, Wall_V, System, EquilTime, CompTime, Wall_Z, HType,
                 FeType, OType, PType, CType, ReaxFFTyping, Temp[:3], EquilTemp, Press[0],
-                EquilPress, Fix_Z, Thermo_Z, Safezone, Mincap, RestartFileFreq)            
+                EquilPress, Fix_Z, Thermo_Z, Safezone, Mincap, RestartFileFreq, HPC)            
             
             HF.MakePBSFile(System, Temp, Press, CWD)
 
@@ -124,14 +124,14 @@ for Temp in Temperatures:
                 HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
-                Safezone, Mincap, RestartFileFreq, runcmd)
+                Safezone, Mincap, RestartFileFreq, runcmd, HPC)
             
             else:
                 print('Previous similation not yet run, creating files')
                 HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
-                Safezone, Mincap, RestartFileFreq, runcmd)
+                Safezone, Mincap, RestartFileFreq, runcmd, HPC)
 
         # Condition for if it's after the first restart
         else:
@@ -159,7 +159,7 @@ for Temp in Temperatures:
                 HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
-                Safezone, Mincap, RestartFileFreq, runcmd)
+                Safezone, Mincap, RestartFileFreq, runcmd, HPC)
 
             else:
                 print('Previous similation not yet run, creating files in current directory')
@@ -176,5 +176,5 @@ for Temp in Temperatures:
                 HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
                 copycommand, EquilTime, Wall_V, System, CompTime,
                 ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
-                Safezone, Mincap, RestartFileFreq, runcmd)
+                Safezone, Mincap, RestartFileFreq, runcmd, HPC)
                 

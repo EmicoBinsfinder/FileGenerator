@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 def MakeLAMMPSFile(
         CWD, 
@@ -642,9 +643,10 @@ unfix           bonds_comp
 undump          ovito_comp
 """)
 
-def MakePBSFile(System, Temp, Press, CWD):
-    with open(os.path.join(CWD, f'{System}_{Temp}_{Press}.pbs'), 'w') as file:
-        file.write(f"""#!/bin/bash
+def MakePBSFile(System, Temp, Press, CWD, HPC):
+    if HPC == 'Imperial':
+        with open(os.path.join(CWD, f'{System}_{Temp}_{Press}.pbs'), 'w') as file:
+            file.write(f"""#!/bin/bash
 
 #PBS -l select=1:ncpus=32:mem=62gb
 #PBS -l walltime=72:00:00
@@ -655,11 +657,43 @@ module load mpi/intel-2019.6.166
 cd $PBS_O_WORKDIR
 mpiexec ~/tmp/bin/lmp -in {System}.lammps
 """)
-        
+    elif HPC == 'UCL':
+        with open(os.path.join(CWD, f'{System}_{Temp}_{Press}.pbs'), 'w') as file:
+            file.write(f"""
+#!/bin/bash -l
+
+# Batch script to run an MPI parallel job under SGE with Intel MPI.
+
+# Request ten minutes of wallclock time (formathours:minutes:seconds).
+#$ -l h_rt=24:00:0
+
+# Request 1 gigabyte of RAM per process (must be an integer followed by M, G, or T)and budgets.
+#$ -A Imperial_MEng
+#$ -l mem=1G
+
+# Set the name of the job.
+#$ -N {System}_{Temp}_{Press}
+
+# Select the MPI parallel environment.
+#$ -pe mpi 120
+
+# Set the working directory to somewhere in your scratch space.
+#$ -wd {CWD}
+mkdir results
+cp * results
+
+# Run our MPI job.  GERun is a wrapper that launchesMPI jobs on our clusters.
+
+gerun /lustre/home/mmm1058/LAMMPS/lammps-install/bin/lmp -l log.lammps -in {System}.lammps
+""")
+    else:
+        print('HPC not properly defined')
+        sys.exit()                       
+
 def MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
               copycommand, EquilTime, Wall_V, System, CompTime,
               ReaxFFTyping, EquilTemp, EquilPress, Fix_Z, Thermo_Z,
-              Safezone, Mincap, RestartFileFreq, runcmd):
+              Safezone, Mincap, RestartFileFreq, runcmd, HPC):
     os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'{FirstStage}'))
     files = os.listdir()
 
@@ -691,4 +725,4 @@ def MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
                                 Press[0], EquilPress, Fix_Z, Thermo_Z, Safezone,
                                 Mincap, RestartFileFreq)
         
-    MakePBSFile(System, Temp, Press, CWD)
+    MakePBSFile(System, Temp, Press, CWD, HPC)
