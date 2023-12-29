@@ -24,7 +24,7 @@ def MakeLAMMPSFile(
         Safezone,
         Mincap,
         RestartFileFreq,
-	    HPC
+	HPC
 ):
 
     with open(os.path.join(CWD, f'{System}.lammps'), 'w') as file:
@@ -660,8 +660,7 @@ mpiexec ~/tmp/bin/lmp -in {System}.lammps
 """)
     elif HPC == 'UCL':
         with open(os.path.join(CWD, f'{System}_{Temp}_{Press}.pbs'), 'w') as file:
-            file.write(f"""
-#!/bin/bash -l
+            file.write(f"""#!/bin/bash -l
 
 # Batch script to run an MPI parallel job under SGE with Intel MPI.
 
@@ -669,6 +668,7 @@ mpiexec ~/tmp/bin/lmp -in {System}.lammps
 #$ -l h_rt=24:00:0
 
 # Request 1 gigabyte of RAM per process (must be an integer followed by M, G, or T)and budgets.
+#$ -P Free
 #$ -A Imperial_MEng
 #$ -l mem=1G
 

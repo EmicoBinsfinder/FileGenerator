@@ -38,7 +38,6 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 ######### File Generation Parameters ###########
 
 STARTINGDIR = '/home/mmm1058/Scratch/TCP_Templates/DCMP_Solvent/' # Home directory to launch generation from
-STARTINGDIR = 'F:/PhD/TCPDecompositionExperiments/Completed/DCMP_Solvent/' # Home directory to launch generation from
 SOURCEDIR = os.path.join(STARTINGDIR, 'SourceDir') # Directory where enabler files are 
 System = 'DCMP_Fe_48_TCP_Mixed' # System being simulated 
 EquilTime = '800000' # Equilibration time
@@ -54,7 +53,7 @@ CType = '4'
 Fix_Z = '1.2' # Fixed layer thickness
 Thermo_Z = '2.4' # Thermostat layer thickness
 ReaxFFTyping = 'Fe P O C H' # Order of elements for ReaxFF command
-Temperatures = ['500K', '700K'] # Temperatures to be simulated
+Temperatures = ['600K'] # Temperatures to be simulated
 Pressures = ['1GPa', '2GPa', '3GPa', '4GPa', '5GPa'] # Pressures to be simulated
 EquilPress = '10' # Equilibration Temperature, in MPa
 EquilTemp = '300'
@@ -65,8 +64,8 @@ HPC = "UCL"
 
 ############# Running the script #########################
 
-FirstRun = True
-copycommand = 'copy'
+FirstRun = False
+copycommand = 'cp'
 os.chdir(STARTINGDIR) # Go to starting directory
 
 for Temp in Temperatures:
@@ -103,7 +102,6 @@ for Temp in Temperatures:
             HF.MakePBSFile(System, Temp, Press, CWD, HPC)
 
             runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
-
             continue
 
         # Check how many restarts there are 
@@ -120,7 +118,7 @@ for Temp in Temperatures:
             NextStage = 'Restart_1'
 
             #Check if first run directory has all relevant files
-            if len(os.listdir(os.getcwd())) > 12:
+            if len(os.listdir(os.getcwd())) > 18:
                 print('Previous simulation ran, creating files for next simulation')
                 
                 HF.MakeFiles(STARTINGDIR, Temp, Press, FirstStage, NextStage,
@@ -150,7 +148,7 @@ for Temp in Temperatures:
             os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'Restart_{CurrentRestartNumber}'))
             #Check if previous restart has ran
             
-            if len(os.listdir(os.getcwd())) > 12:
+            if len(os.listdir(os.getcwd())) > 18:
                 print('Previous simulation ran') # Could add note saying how far it ran
                 os.chdir(os.path.join(STARTINGDIR, Temp, Press)) 
                 runcmd(f'mkdir Restart_{NextRestartNumber}')
