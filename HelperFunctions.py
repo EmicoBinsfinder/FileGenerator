@@ -480,7 +480,7 @@ velocity        top_fixed set ${{vel_top}} 0.0 0.0 units box
 #---------Calculate Friction-----------------------------
 
 variable        div_s    equal {RestartFileFreq}
-variable        ts_div_s equal ${{Ncomp}}/${RestartFileFreq}
+variable        ts_div_s equal ${{Ncomp}}/${{div_s}}
 
 fix             fc_ave all ave/time 1 ${{ts_div_s}} ${{ts_div_s}} v_s_bot v_p_bot file fc_ave.dump
 
