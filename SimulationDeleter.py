@@ -1,5 +1,5 @@
 """
-Script to automatically delete all simulations
+Script to automatically delete simulations
 
 """
 
@@ -16,7 +16,7 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 runcmd('qstat > sims.txt')
 
 sims = []
-with open('sims.text', 'r') as file:
+with open('sims.txt', 'r') as file:
     next(file)
     next(file)
     filelist = file.readlines()

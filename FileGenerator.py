@@ -9,7 +9,6 @@ Script to automatically generate files/directories for similar conditions
 - Be able to toggle between generated LAMMPS file (equil or comp)
 - Make QSUB files for each condition being simulated
 - Make QSUB files depending on HPC being used
-- Need to make sure that we are creating right stage restart for eachn condition
 
 Will require that all experiments that we are generating files for are
 at the same 'stage', will need to check this.
@@ -37,13 +36,13 @@ def runcmd(cmd, verbose = False, *args, **kwargs):
 
 ######### File Generation Parameters ###########
 
-STARTINGDIR = '/home/mmm1058/Scratch/TCP_Templates/DCMP_Solvent/' # Home directory to launch generation from
+STARTINGDIR = '/rds/general/user/eeo21/home/TCPDecompositionExperiments/RoughSurfaces/Iron/8nm/' # Home directory to launch generation from
 SOURCEDIR = os.path.join(STARTINGDIR, 'SourceDir') # Directory where enabler files are 
-System = 'DCMP_Fe_48_TCP_Mixed' # System being simulated 
+System = '90_TCP_Fe_0_8nm' # System being simulated 
 EquilTime = '800000' # Equilibration time
-CompTime = '4000000' # Compression and shear time
+CompTime = '4800000' # Compression and shear time
 Wall_V = '0.0001' # Wall velocity
-Wall_Z = '7' # Wall thickness
+Wall_Z = '17' # Wall thickness
 # Atom types
 HType =  '5' 
 FeType = '1'
@@ -53,16 +52,16 @@ CType = '4'
 Fix_Z = '1.2' # Fixed layer thickness
 Thermo_Z = '2.4' # Thermostat layer thickness
 ReaxFFTyping = 'Fe P O C H' # Order of elements for ReaxFF command
-Temperatures = ['600K'] # Temperatures to be simulated
+Temperatures = ['500K', '600K', '700K'] # Temperatures to be simulated
 Pressures = ['1GPa', '2GPa', '3GPa', '4GPa', '5GPa'] # Pressures to be simulated
 EquilPress = '10' # Equilibration Temperature, in MPa
 EquilTemp = '300'
-Safezone = '800' # System memory parameter
-Mincap = '1800' # System memory parameter
-RestartFileFreq = '100'
-HPC = "UCL"
+Safezone = '80' # System memory parameter
+Mincap = '180' # System memory parameter
+RestartFileFreq = '100' 
+HPC = "Imperial"
 
-############# Running the script #########################
+############# Calling the function #########################
 
 FirstRun = False
 copycommand = 'cp'
@@ -74,7 +73,7 @@ for Temp in Temperatures:
 
         #Make directories if they don't exist
         try:
-            os.mkdir(f"{Temp}")
+            os.mkdir(f'{Temp}')
         except FileExistsError:
             pass
         
@@ -85,9 +84,10 @@ for Temp in Temperatures:
         except FileExistsError:
             pass
 
-        # Enter condition directory
         os.chdir(os.path.join(STARTINGDIR, Temp, Press))
 
+        # RestartList = [x for x in os.listdir() if 'Restart' in x]
+        
         if FirstRun:
             runcmd('mkdir FirstRun')
             os.chdir(os.path.join(os.getcwd(), 'FirstRun')) #Enter first run directory
@@ -97,12 +97,11 @@ for Temp in Temperatures:
         
             HF.MakeLAMMPSFile(CWD, Wall_V, System, EquilTime, CompTime, Wall_Z, HType,
                 FeType, OType, PType, CType, ReaxFFTyping, Temp[:3], EquilTemp, Press[0],
-                EquilPress, Fix_Z, Thermo_Z, Safezone, Mincap, RestartFileFreq, HPC)            
+                EquilPress, Fix_Z, Thermo_Z, Safezone, Mincap, RestartFileFreq)            
             
-            HF.MakePBSFile(System, Temp, Press, CWD, HPC)
+            HF.MakePBSFile(System, Temp, Press, CWD)
 
             runcmd(f'qsub {System}_{Temp}_{Press}.pbs')
-            continue
 
         # Check how many restarts there are 
         RestartList = [x for x in os.listdir() if 'Restart' in x]
@@ -150,9 +149,24 @@ for Temp in Temperatures:
             
             if len(os.listdir(os.getcwd())) > 18:
                 print('Previous simulation ran') # Could add note saying how far it ran
+
+                # Check if completely finished
+                files = os.listdir()
+
+                # Get restart file progress
+                equilfiles = [int(x.split('.')[-1]) for x in files if 'equil.restart' in x]
+                compfiles = [int(x.split('.')[-1]) for x in files if 'comp.restart' in x]
+                restartfiles = equilfiles + compfiles # Concatenating restart file numbers
+                restartfiles = sorted(restartfiles)
+
+                if restartfiles[-1] == CompTime:
+                    print('Simulation Completed')
+                    continue
+
                 os.chdir(os.path.join(STARTINGDIR, Temp, Press)) 
                 runcmd(f'mkdir Restart_{NextRestartNumber}')
                 os.chdir(os.path.join(STARTINGDIR, Temp, Press, f'Restart_{NextRestartNumber}')) 
+                
                 # Copy enabler files into 
                 for file in os.listdir(SOURCEDIR):  
                     runcmd(f'{copycommand} "{os.path.join(SOURCEDIR, file)}" {os.getcwd()}')
